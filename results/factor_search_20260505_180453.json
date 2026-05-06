@@ -1,0 +1,128 @@
+[
+  {
+    "round": 3,
+    "name": "volume_surge_price_recovery_signal",
+    "expr": "((close / close.rolling(10).mean() - 1) * -1) * (volume / volume.rolling(20).mean()).rolling(3).mean().rank(axis=1, pct=True)",
+    "logic": "股价偏离20日均线越深（超跌程度）且近3日成交量持续放大的股票，机构在低位吸筹信号更稳定，均值回归概率更高",
+    "mean_ic": 0.0136,
+    "icir": 0.0375,
+    "ic_pos": 0.521,
+    "yearly_ic": {
+      "2024": 0.0035,
+      "2025": 0.0225,
+      "2026": 0.0147
+    }
+  },
+  {
+    "round": 2,
+    "name": "volume_price_divergence_reversal",
+    "expr": "(-close.pct_change(5)) * (volume.rolling(5).mean() / volume.rolling(20).mean()).rank(axis=1, pct=True)",
+    "logic": "近5日跌幅越大且近期成交量相对长期均量显著放大的股票，机构资金在低位建仓概率更高，预期均值回归",
+    "mean_ic": 0.0128,
+    "icir": 0.036,
+    "ic_pos": 0.523,
+    "yearly_ic": {
+      "2024": 0.0085,
+      "2025": 0.0214,
+      "2026": -0.0065
+    }
+  },
+  {
+    "round": 2,
+    "name": "price_momentum_volume_confirmation",
+    "expr": "(-np.sign(close.pct_change(3))) * (np.abs(close.pct_change(3)) / (close.rolling(10).std() / close.rolling(10).mean())) * (1 - (volume.rolling(3).mean() / volume.rolling(20).mean()).rank(axis=1, pct=True))",
+    "logic": "价格短期大幅下跌但成交量未显著放量时，抛压动能衰竭信号更纯粹，超跌反弹概率更高",
+    "mean_ic": -0.0093,
+    "icir": -0.0311,
+    "ic_pos": 0.497,
+    "yearly_ic": {
+      "2024": 0.0065,
+      "2025": -0.027,
+      "2026": 0.0028
+    }
+  },
+  {
+    "round": 3,
+    "name": "intraday_momentum_break_reversal",
+    "expr": "np.sign(close.pct_change(1)) * -1 * (np.abs(close.pct_change(5)) / (close.rolling(20).std() / close.rolling(20).mean())) * (volume.pct_change(1).rank(axis=1, pct=True))",
+    "logic": "昨日下跌、5日跌幅相对波动率显著且今日成交量放大的股票，反映短期过度抛售后资金介入，预期次日反弹",
+    "mean_ic": 0.0084,
+    "icir": 0.0256,
+    "ic_pos": 0.501,
+    "yearly_ic": {
+      "2024": 0.0244,
+      "2025": -0.0041,
+      "2026": -0.002
+    }
+  },
+  {
+    "round": 2,
+    "name": "intraday_close_relative_strength",
+    "expr": "(close / close.rolling(10).mean() - 1).rank(axis=1, pct=True).rolling(3).mean().rank(axis=1, pct=True) * (-1) * (np.log(volume) - np.log(volume.rolling(20).mean())).rolling(5).mean().rank(axis=1, pct=True)",
+    "logic": "持续处于10日均价下方且近期成交量对数偏离度累计放大的股票，反映机构持续低位吸筹，均值回归动力更强",
+    "mean_ic": -0.0071,
+    "icir": -0.0233,
+    "ic_pos": 0.505,
+    "yearly_ic": {
+      "2024": -0.0137,
+      "2025": -0.0024,
+      "2026": -0.0013
+    }
+  },
+  {
+    "round": 3,
+    "name": "price_drop_exhaustion_with_volume_dry",
+    "expr": "((close.pct_change(3) * -1).rank(axis=1, pct=True)) * ((1 - (volume.rolling(3).mean() / volume.rolling(15).mean())).clip(lower=0).rank(axis=1, pct=True))",
+    "logic": "短期（3日）跌幅越大且近期成交量相对萎缩（量能枯竭），说明抛压衰竭而非恐慌性踩踏，反弹概率更高",
+    "mean_ic": -0.0052,
+    "icir": -0.0171,
+    "ic_pos": 0.491,
+    "yearly_ic": {
+      "2024": -0.0083,
+      "2025": -0.0088,
+      "2026": 0.0219
+    }
+  },
+  {
+    "round": 1,
+    "name": "short_term_reversal_volume_weighted",
+    "expr": "-close.pct_change(5).rank(axis=1, pct=True) * (volume.rolling(5).mean() / volume.rolling(20).mean()).rank(axis=1, pct=True)",
+    "logic": "近5日跌幅越大且近期成交量相对放大的股票，机构抄底迹象明显，均值回归概率更高",
+    "mean_ic": -0.0042,
+    "icir": -0.0131,
+    "ic_pos": 0.501,
+    "yearly_ic": {
+      "2024": -0.0004,
+      "2025": -0.0094,
+      "2026": 0.0029
+    }
+  },
+  {
+    "round": 1,
+    "name": "volatility_normalized_mean_reversion",
+    "expr": "-(close - close.rolling(10).mean()) / close.rolling(10).std()",
+    "logic": "价格相对近10日均值的标准差偏离度越大（超跌），波动率归一化后预期均值回归幅度越强",
+    "mean_ic": 0.004,
+    "icir": 0.0123,
+    "ic_pos": 0.492,
+    "yearly_ic": {
+      "2024": -0.0031,
+      "2025": 0.0115,
+      "2026": 0.0014
+    }
+  },
+  {
+    "round": 1,
+    "name": "volume_surge_price_dislocation",
+    "expr": "(volume / volume.rolling(20).mean() - 1).rank(axis=1, pct=True) * (-np.sign(close.pct_change(1))) * np.abs(close.pct_change(1)).rank(axis=1, pct=True)",
+    "logic": "单日成交量异常放大同时价格出现方向性偏离，反向信号捕捉机构逆势建仓行为",
+    "mean_ic": 0.0002,
+    "icir": 0.0007,
+    "ic_pos": 0.497,
+    "yearly_ic": {
+      "2024": 0.0172,
+      "2025": -0.0062,
+      "2026": -0.0391
+    }
+  }
+]

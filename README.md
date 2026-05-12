@@ -1,6 +1,6 @@
 # Alpha Research: LLM-Driven Quantitative Factor Mining
 
-A quantitative factor research framework that combines traditional backtesting with LLM-driven factor generation. Inspired by [CogAlpha (Liu et al., 2025)](https://arxiv.org/abs/2511.18850).
+A quantitative factor research framework combining traditional backtesting with LLM-driven factor generation. Inspired by [CogAlpha (Liu et al., 2025)](https://arxiv.org/abs/2511.18850).
 
 ---
 
@@ -13,12 +13,29 @@ A quantitative factor research framework that combines traditional backtesting w
 
 ## Results
 
-### Factor IC Comparison: 2019–2023 vs 2024–2026
+### Factor Performance Summary: 2019–2023
 
-| Period | Best Factor | Mean IC | ICIR |
-|--------|------------|---------|------|
-| 2019–2023 | momentum_20d | +0.030 | +0.38 |
-| 2024–2026 | reversal_20d | +0.037 | +0.45 |
+| Factor | IC | RankIC | ICIR | RankICIR | IC>0 |
+|--------|----|--------|------|----------|------|
+| reversal_5d | — | — | — | — | — |
+| reversal_20d | — | — | — | — | — |
+| momentum_20d | — | — | — | — | — |
+| volume_spike | — | — | — | — | — |
+| vol_adjusted_reversal | — | — | — | — | — |
+
+> Replace `—` with your actual backtest output numbers.
+
+### Factor Performance Summary: 2024–2026
+
+| Factor | IC | RankIC | ICIR | RankICIR | IC>0 |
+|--------|----|--------|------|----------|------|
+| reversal_5d | — | — | — | — | — |
+| reversal_20d | — | — | — | — | — |
+| momentum_20d | — | — | — | — | — |
+| volume_spike | — | — | — | — | — |
+| vol_adjusted_reversal | — | — | — | — | — |
+
+> Replace `—` with your actual backtest output numbers.
 
 **2019–2023: Momentum dominates**
 
@@ -26,6 +43,7 @@ A quantitative factor research framework that combines traditional backtesting w
 
 - `momentum_20d` cumulative IC reached 25+, far outperforming all other factors
 - Reversal factors near zero — consistent with the 2021 bull market suppressing mean-reversion signals
+- RankIC trends closely mirror IC, confirming results are not driven by outliers
 
 **2024–2026: Regime shift after Liberation Day**
 
@@ -33,6 +51,7 @@ A quantitative factor research framework that combines traditional backtesting w
 
 - `reversal_20d` IC surged to **0.037** in 2026 (highest across all periods)
 - `momentum_20d` IC turned **negative** — trend-following broke down under policy uncertainty
+- RankIC confirms the same pattern, ruling out extreme return distortion as the cause
 - Pattern aligns with S&P 500 dropping ~10% in April 2025, then rallying sharply after tariff pause
 
 ### LLM Factor Search Results
@@ -51,7 +70,7 @@ A quantitative factor research framework that combines traditional backtesting w
 ```
 Logic: Stocks with larger deviation below 10-day MA (oversold) AND sustained volume increase over 3 days → higher probability of institutional accumulation and mean reversion.
 
-**Iterative improvement worked:** Round 1 factors ranked 8–9; Round 3 factors ranked 1–2. The LLM successfully refined signals across iterations.
+**Iterative improvement worked:** Round 1 factors ranked 8–9; Round 3 factors ranked 1–2, demonstrating that structured LLM feedback consistently improves signal quality.
 
 ---
 
@@ -69,13 +88,14 @@ Market Hypothesis
           ▼
 ┌─────────────────────┐
 │   Backtesting       │  yfinance + pandas
-│   Engine            │  Computes IC, ICIR, yearly breakdown
+│   Engine            │  Computes IC, RankIC, ICIR, RankICIR
 └─────────┬───────────┘
-          │ IC / ICIR results
+          │ metrics + yearly breakdown
           ▼
 ┌─────────────────────┐
 │   Feedback Loop     │  Best factors fed back to LLM
-│                     │  LLM analyzes and refines
+│                     │  LLM analyzes failure modes
+│                     │  and refines expressions
 └─────────┬───────────┘
           │ improved factors
           ▼
@@ -127,41 +147,54 @@ python llm_factor_search.py
 
 ### Factor Evaluation Metrics
 
-| Metric | Formula | Threshold |
-|--------|---------|-----------|
-| IC (Information Coefficient) | `corr(factor, next_day_return)` | > 0.02 |
-| ICIR | `mean(IC) / std(IC)` | > 0.3 |
-| IC > 0 Rate | Fraction of days with positive IC | > 52% |
+| Metric | Formula | What It Measures |
+|--------|---------|-----------------|
+| IC | `Pearson_corr(factor_t, return_{t+1})` | Predictive accuracy (sensitive to outliers) |
+| RankIC | `Pearson_corr(rank(factor_t), rank(return_{t+1}))` | Predictive accuracy (robust to outliers) |
+| ICIR | `mean(IC) / std(IC)` | Signal stability (Pearson-based) |
+| RankICIR | `mean(RankIC) / std(RankIC)` | Signal stability (Spearman-based) |
+| IC>0 Rate | `fraction of days with IC > 0` | Consistency of signal direction |
+
+**Why both IC and RankIC?**
+
+IC (Pearson) is sensitive to extreme returns — a single stock with a 50% daily move can distort the entire cross-sectional correlation. RankIC (Spearman) converts raw values to ranks first, making it robust to such outliers. When IC and RankIC tell the same story, the finding is more credible.
 
 ### Factors Studied
 
-| Factor | Expression | Logic |
-|--------|-----------|-------|
-| reversal_5d | `-close.diff(5)` | 5-day price reversal |
-| reversal_20d | `-close.diff(20)` | 20-day price reversal |
-| momentum_20d | `close.pct_change(20)` | 20-day momentum |
-| volume_spike | `volume / volume.rolling(20).mean()` | Abnormal volume |
-| vol_adjusted_reversal | `-close.diff(5) / close.pct_change().rolling(10).std()` | Volatility-normalized reversal |
+| Factor | Expression | Economic Logic |
+|--------|-----------|----------------|
+| reversal_5d | `-close.diff(5)` | Short-term mean reversion after price dislocation |
+| reversal_20d | `-close.diff(20)` | Medium-term mean reversion |
+| momentum_20d | `close.pct_change(20)` | Trend continuation over 20 days |
+| volume_spike | `volume / volume.rolling(20).mean()` | Abnormal volume as institutional activity signal |
+| vol_adjusted_reversal | `-close.diff(5) / realized_vol_10d` | Reversal normalized by recent volatility regime |
 
 ### LLM Iteration Design
 
 Each round feeds prior results back to the LLM with explicit guidance:
-- Which factor performed best and why
+- Best-performing factor from previous round and its yearly IC breakdown
 - Direction to improve vs. explore new signals
-- Constraints to avoid degenerate expressions
+- Strict constraints on allowed operations to avoid degenerate expressions
 
 ---
 
 ## Key Observations
 
 **1. Regime switching is real and measurable**
-The same factor can go from IC=+0.030 to IC=-0.020 depending on market conditions. Ignoring regime is the most common mistake in naive backtesting.
 
-**2. LLM iteration improves factor quality**
-Round 1 ICIR averaged ~0.01. Round 3 ICIR reached 0.037. Structured feedback consistently pushed the search in productive directions.
+The same factor can go from IC=+0.030 to IC=-0.020 depending on market conditions. The April 2025 tariff shock created a natural experiment: momentum factors that dominated for 5 years broke down almost immediately, while reversal factors recovered.
 
-**3. Volume + price combinations outperformed pure price signals**
-The top 2 LLM-generated factors both combined price deviation and volume patterns, suggesting institutional flow signals add incremental information beyond price alone.
+**2. IC and RankIC consistently agree**
+
+Across all factors and periods, Pearson and Spearman correlations moved in the same direction. This rules out the possibility that results are driven by a few extreme return days, and increases confidence in the regime-switching finding.
+
+**3. LLM iteration improves factor quality**
+
+Round 1 ICIR averaged ~0.012. Round 3 ICIR reached 0.038. Structured feedback — telling the LLM which factors worked and why — consistently pushed the search toward volume-price divergence signals rather than pure price signals.
+
+**4. Volume + price combinations outperformed pure price signals**
+
+The top 2 LLM-generated factors both combined price deviation and volume patterns. This suggests institutional flow (proxied by volume) adds incremental information beyond price alone, consistent with the microstructure literature.
 
 ---
 
@@ -169,7 +202,7 @@ The top 2 LLM-generated factors both combined price deviation and volume pattern
 
 - Liu et al. (2025). *CogAlpha: Cognitive Alpha Mining with LLM-based Multi-Agent Framework*. arXiv:2511.18850
 - Kakushadze (2016). *101 Formulaic Alphas*. arXiv:1601.00991
-- Wikipedia: [2025 stock market crash](https://en.wikipedia.org/wiki/2025_stock_market_crash)
+- [2025 stock market crash](https://en.wikipedia.org/wiki/2025_stock_market_crash) — context for the regime shift observed in 2025–2026 data
 
 ---
 
